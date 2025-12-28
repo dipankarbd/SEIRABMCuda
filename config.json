@@ -1,0 +1,41 @@
+{
+  "simulation": {
+    "num_agents": 5000000,
+    "world_size": [10000.0, 10000.0],
+    "timestep": 0.1,
+    "duration": 365
+  },
+
+  "disease": {
+    "incubation_period": { "mean": 5.0, "std": 2.0 },
+    "infectious_period": { "mean": 7.0, "std": 2.0 },
+    "transmission_probability": 0.05,
+    "contact_radius": 2.0,
+    "initial_infected": 100
+  },
+  "agent_behavior": {
+    "movement_speed": 1.0,
+    "mobility_radius": 50.0,
+    "home_return_probability": 0.3
+  },
+  "interventions": [
+    {
+      "type": "lockdown",
+      "start_day": 30,
+      "end_day": 60,
+      "mobility_reduction": 0.7
+    },
+    {
+      "type": "vaccination",
+      "start_day": 90,
+      "daily_capacity": 5000,
+      "efficacy": 0.9
+    }
+  ],
+  "output": {
+    "snapshotInterval": 4,
+    "outputDir": "./output",
+    "saveAnimationFrames": true,
+    "animationFrameInterval": 4
+  }
+}
