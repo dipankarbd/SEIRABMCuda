@@ -16,6 +16,11 @@ int main(int argc, char *argv[]) {
     AgentData d_agents;
 
     int num_agents = h_config.simulation.num_agents;
+    int random_seed = h_config.simulation.randomSeed;
+    float world_width = h_config.simulation.world_size[0];
+    float world_height = h_config.simulation.world_size[1];
+    float agent_movement_speed = h_config.agent_behavior.movement_speed;
+
     cudaError_t cudaStat;
 
     printf("Allocating memory for %d agents on GPU...\n", num_agents);
@@ -49,7 +54,8 @@ int main(int argc, char *argv[]) {
     int numBlocks = (num_agents + threadsPerBlock - 1) / threadsPerBlock;
 
     printf("Launching agentInitializationKernel...\n");
-    agentInitializationKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents);
+    agentInitializationKernel<<<numBlocks, threadsPerBlock>>>(
+        d_agents, num_agents, random_seed, world_width, world_height, agent_movement_speed);
     checkCudaError(cudaGetLastError(), "agentInitializationKernel launch");
     checkCudaError(cudaDeviceSynchronize(), "agentInitializationKernel synchronization");
 

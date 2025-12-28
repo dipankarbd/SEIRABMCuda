@@ -4,7 +4,7 @@
     "world_size": [10000.0, 10000.0],
     "timestep": 0.1,
     "duration": 365,
-    "randomSeed": 42
+    "randomSeed": 465746854
   },
 
   "disease": {
