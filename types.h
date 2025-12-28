@@ -7,7 +7,7 @@
 
 enum SEIRState { SUSCEPTIBLE = 0, EXPOSED = 1, INFECTIOUS = 2, RECOVERED = 3 };
 
-struct AgentData {
+typedef struct {
     float *x;               // x positions
     float *y;               // y positions
     float *homeX;           // home x positions
@@ -18,7 +18,16 @@ struct AgentData {
     float *stateTimer;      // time remaining in current state
     unsigned int *cellId;   // spatial hash
     curandState *rngStates; // RNG state per agent
-};
+} AgentData;
+
+typedef struct {
+    int susceptible;
+    int exposed;
+    int infectious;
+    int recovered;
+    int newInfections;
+    int newRecoveries;
+} Statistics;
 
 typedef struct {
     double mean;
@@ -30,6 +39,7 @@ typedef struct {
     float world_size[2];
     float timestep;
     int duration;
+    int randomSeed;
 } SimulationParams;
 
 typedef struct {
@@ -47,15 +57,6 @@ typedef struct {
 } AgentBehavior;
 
 typedef struct {
-    char *type;
-    int start_day;
-    int end_day;
-    float mobility_reduction;
-    int daily_capacity;
-    float efficacy;
-} Intervention;
-
-typedef struct {
     int snapshotInterval;
     char *outputDir;
     bool saveAnimationFrames;
@@ -66,9 +67,8 @@ typedef struct {
     SimulationParams simulation;
     DiseaseParams disease;
     AgentBehavior agent_behavior;
-    Intervention *interventions;
-    int num_interventions;
     OutputParams output;
 } SimulationConfig;
 
 #endif
+

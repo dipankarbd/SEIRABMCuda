@@ -43,6 +43,7 @@ void load_simulation_config(const char *filename, SimulationConfig *config) {
     config->simulation.world_size[1] = (float)cJSON_GetArrayItem(world_size, 1)->valuedouble;
     config->simulation.timestep = (float)cJSON_GetObjectItem(sim, "timestep")->valuedouble;
     config->simulation.duration = cJSON_GetObjectItem(sim, "duration")->valueint;
+    config->simulation.randomSeed = cJSON_GetObjectItem(sim, "randomSeed")->valueint;
 
     cJSON *disease = cJSON_GetObjectItem(json, "disease");
     // Error check
@@ -83,87 +84,6 @@ void load_simulation_config(const char *filename, SimulationConfig *config) {
         (float)cJSON_GetObjectItem(agent_behavior_json, "mobility_radius")->valuedouble;
     config->agent_behavior.home_return_probability =
         (float)cJSON_GetObjectItem(agent_behavior_json, "home_return_probability")->valuedouble;
-
-    cJSON *interventions_array = cJSON_GetObjectItem(json, "interventions");
-    if (interventions_array && cJSON_IsArray(interventions_array)) {
-        config->num_interventions = cJSON_GetArraySize(interventions_array);
-
-        config->interventions =
-            (Intervention *)malloc(config->num_interventions * sizeof(Intervention));
-        if (config->interventions == NULL) {
-            fprintf(stderr, "Error: Failed to allocate memory for interventions.\n");
-            exit(1);
-        }
-
-        for (int i = 0; i < config->num_interventions; i++) {
-            config->interventions[i].type = NULL;
-        }
-
-        for (int i = 0; i < config->num_interventions; i++) {
-            cJSON *intervention_item = cJSON_GetArrayItem(interventions_array, i);
-            if (!cJSON_IsObject(intervention_item)) {
-                fprintf(stderr, "Error: Intervention item %d is not an object.\n", i);
-                exit(1);
-            }
-
-            cJSON *type_json = cJSON_GetObjectItem(intervention_item, "type");
-            if (cJSON_IsString(type_json)) {
-                config->interventions[i].type = strdup(type_json->valuestring);
-            } else {
-                fprintf(stderr, "Error: 'type' not found or invalid for intervention %d.\n", i);
-                exit(1);
-            }
-
-            cJSON *start_day_json = cJSON_GetObjectItem(intervention_item, "start_day");
-            if (cJSON_IsNumber(start_day_json)) {
-                config->interventions[i].start_day = start_day_json->valueint;
-            } else {
-                fprintf(stderr, "Error: 'start_day' not found or invalid for intervention %d.\n",
-                        i);
-                exit(1);
-            }
-
-            cJSON *end_day_json = cJSON_GetObjectItem(intervention_item, "end_day");
-            if (cJSON_IsNumber(end_day_json)) {
-                config->interventions[i].end_day = end_day_json->valueint;
-            } else {
-                // Set to -1 if 'end_day' is not found or invalid (e.g., for vaccination)
-                config->interventions[i].end_day = -1;
-                fprintf(
-                    stderr,
-                    "Warning: 'end_day' not found or invalid for intervention %d. Setting to -1.\n",
-                    i);
-            }
-
-            cJSON *mobility_reduction_json =
-                cJSON_GetObjectItem(intervention_item, "mobility_reduction");
-            if (cJSON_IsNumber(mobility_reduction_json)) {
-                config->interventions[i].mobility_reduction =
-                    (float)mobility_reduction_json->valuedouble;
-            } else {
-                config->interventions[i].mobility_reduction = 0.0f; // Default if not present
-            }
-
-            cJSON *daily_capacity_json = cJSON_GetObjectItem(intervention_item, "daily_capacity");
-            if (cJSON_IsNumber(daily_capacity_json)) {
-                config->interventions[i].daily_capacity = daily_capacity_json->valueint;
-            } else {
-                config->interventions[i].daily_capacity = 0; // Default if not present
-            }
-
-            cJSON *efficacy_json = cJSON_GetObjectItem(intervention_item, "efficacy");
-            if (cJSON_IsNumber(efficacy_json)) {
-                config->interventions[i].efficacy = (float)efficacy_json->valuedouble;
-            } else {
-                config->interventions[i].efficacy = 0.0f; // Default if not present
-            }
-        }
-    } else {
-        config->num_interventions = 0;
-        config->interventions = NULL;
-        fprintf(stderr, "Warning: 'interventions' array not found or invalid in config file. No "
-                        "interventions will be loaded.\n");
-    }
 
     cJSON *output_json = cJSON_GetObjectItem(json, "output");
     if (!cJSON_IsObject(output_json)) {
@@ -213,19 +133,6 @@ void load_simulation_config(const char *filename, SimulationConfig *config) {
     printf("  Mobility Radius: %f\n", config->agent_behavior.mobility_radius);
     printf("  Home Return Probability: %f\n", config->agent_behavior.home_return_probability);
 
-    printf("Interventions:\n");
-    for (int i = 0; i < 2; i++) {
-        if (config->interventions[i].type != NULL) {
-            printf("  Intervention %d:\n", i + 1);
-            printf("    Type: %s\n", config->interventions[i].type);
-            printf("    Start Day: %d\n", config->interventions[i].start_day);
-            printf("    End Day: %d\n", config->interventions[i].end_day);
-            printf("    Mobility Reduction: %f\n", config->interventions[i].mobility_reduction);
-            printf("    Daily Capacity: %d\n", config->interventions[i].daily_capacity);
-            printf("    Efficacy: %f\n", config->interventions[i].efficacy);
-        }
-    }
-
     printf("Output Parameters:\n");
     printf("  Snapshot Interval: %d\n", config->output.snapshotInterval);
     printf("  Output Directory: %s\n", config->output.outputDir);
@@ -240,23 +147,6 @@ void free_simulation_config(SimulationConfig *config) {
     if (config == NULL) {
         return;
     }
-
-    // Free interventions
-
-    if (config->interventions != NULL) {
-        for (int i = 0; i < config->num_interventions; i++) {
-            if (config->interventions[i].type != NULL) {
-                free(config->interventions[i].type);
-                config->interventions[i].type = NULL;
-            }
-        }
-
-        free(config->interventions);
-        config->interventions = NULL;
-        config->num_interventions = 0;
-    }
-
-    // Free output directory string
 
     if (config->output.outputDir != NULL) {
         free(config->output.outputDir);
