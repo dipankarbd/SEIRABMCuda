@@ -55,7 +55,7 @@ void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infecte
         return;
     }
 
-    printf("Infecting %d agents on the host...\n", initial_infected);
+    printf("Infecting %d agents...\n", initial_infected);
 
     unsigned int *h_agents_state = (unsigned int *)malloc(num_agents * sizeof(unsigned int));
     float *h_agents_stateTimer = (float *)malloc(num_agents * sizeof(float));
@@ -111,11 +111,10 @@ int main(int argc, char *argv[]) {
 
     allocateAgentData(&d_agents, num_agents);
 
-    // Determine grid and block dimensions
     int threadsPerBlock = BLOCK_SIZE;
     int numBlocks = (num_agents + threadsPerBlock - 1) / threadsPerBlock;
 
-    printf("Launching agentInitializationKernel...\n");
+    printf("Initializing agents...\n");
     agentInitializationKernel<<<numBlocks, threadsPerBlock>>>(
         d_agents, num_agents, random_seed, world_width, world_height, agent_movement_speed);
     checkCudaError(cudaGetLastError(), "agentInitializationKernel launch");
@@ -124,51 +123,51 @@ int main(int argc, char *argv[]) {
     infectInitialAgents(d_agents, num_agents, h_config.disease.initial_infected, random_seed,
                         infectious_mean);
 
-    printf("Launching agentMovementKernel...\n");
-    agentMovementKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, world_width,
-                                                        world_height, agent_movement_speed,
-                                                        home_return_probability, timestep);
-    checkCudaError(cudaGetLastError(), "agentMovementKernel launch");
+    int totalSteps = (int)(h_config.simulation.duration / h_config.simulation.timestep);
 
-    printf("Launching spatialIndexingKernel...\n");
-    spatialIndexingKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, cell_size,
-                                                          grid_width);
-    checkCudaError(cudaGetLastError(), "spatialIndexingKernel launch");
+    Statistics *h_stats = (Statistics *)malloc(totalSteps * sizeof(Statistics));
+    memset(h_stats, 0, totalSteps * sizeof(Statistics));
 
-    printf("Launching diseaseTransmissionKernel...\n");
-    diseaseTransmissionKernel<<<numBlocks, threadsPerBlock>>>(
-        d_agents, num_agents, grid_width, grid_height, contact_radius, incubation_mean,
-        incubation_std, transmission_prob);
-    checkCudaError(cudaGetLastError(), "diseaseTransmissionKernel launch");
+    Statistics *d_stat;
+    cudaMalloc((void **)&d_stat, sizeof(Statistics));
 
-    printf("Launching stateTransitionKernel...\n");
-    stateTransitionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, timestep,
-                                                          infectious_mean, infectious_std);
-    checkCudaError(cudaGetLastError(), "stateTransitionKernel launch");
+    printf("Running simulation loop...\n");
+    for (int step = 0; step < totalSteps; step++) {
+        float currentDay = step * timestep;
 
-    printf("Launching statisticsCollectionKernel...\n");
+        agentMovementKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, world_width,
+                                                            world_height, agent_movement_speed,
+                                                            home_return_probability, timestep);
+        checkCudaError(cudaGetLastError(), "agentMovementKernel launch");
 
-    Statistics h_stats = {0, 0, 0, 0};
-    Statistics *d_stats;
-    cudaMalloc((void **)&d_stats, sizeof(Statistics));
-    cudaMemset(d_stats, 0, sizeof(Statistics));
+        spatialIndexingKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, cell_size,
+                                                              grid_width);
+        checkCudaError(cudaGetLastError(), "spatialIndexingKernel launch");
 
-    statisticsCollectionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, d_stats);
-    checkCudaError(cudaGetLastError(), "statisticsCollectionKernel launch");
-    checkCudaError(cudaDeviceSynchronize(), "statisticsCollectionKernel synchronization");
+        diseaseTransmissionKernel<<<numBlocks, threadsPerBlock>>>(
+            d_agents, num_agents, grid_width, grid_height, contact_radius, incubation_mean,
+            incubation_std, transmission_prob);
+        checkCudaError(cudaGetLastError(), "diseaseTransmissionKernel launch");
 
-    cudaMemcpy(&h_stats, d_stats, sizeof(Statistics), cudaMemcpyDeviceToHost);
+        stateTransitionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, timestep,
+                                                              infectious_mean, infectious_std);
+        checkCudaError(cudaGetLastError(), "stateTransitionKernel launch");
 
-    printf("Susceptible: %d, Exposed: %d, Infectious: %d, Recovered: %d\n", h_stats.susceptible,
-           h_stats.exposed, h_stats.infectious, h_stats.recovered);
+        cudaMemset(d_stat, 0, sizeof(Statistics));
 
-    cudaFree(d_stats);
+        statisticsCollectionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, d_stat);
+        checkCudaError(cudaGetLastError(), "statisticsCollectionKernel launch");
+        checkCudaError(cudaDeviceSynchronize(), "statisticsCollectionKernel synchronization");
 
-    printf("All kernels launched and completed successfully.\n");
+        cudaMemcpy(&h_stats[step], d_stat, sizeof(Statistics), cudaMemcpyDeviceToHost);
 
+        printf("Day %.1f: S=%d E=%d I=%d R=%d\n", currentDay, h_stats[step].susceptible,
+               h_stats[step].exposed, h_stats[step].infectious, h_stats[step].recovered);
+    }
+
+    cudaFree(d_stat);
     freeAgentData(&d_agents);
-
-    // Free dynamically allocated memory in config
+    free(h_stats);
     free_simulation_config(&h_config);
 
     return 0;
