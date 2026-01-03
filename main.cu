@@ -147,9 +147,22 @@ int main(int argc, char *argv[]) {
     checkCudaError(cudaGetLastError(), "stateTransitionKernel launch");
 
     printf("Launching statisticsCollectionKernel...\n");
-    statisticsCollectionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents);
+
+    Statistics h_stats = {0, 0, 0, 0};
+    Statistics *d_stats;
+    cudaMalloc((void **)&d_stats, sizeof(Statistics));
+    cudaMemset(d_stats, 0, sizeof(Statistics));
+
+    statisticsCollectionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, d_stats);
     checkCudaError(cudaGetLastError(), "statisticsCollectionKernel launch");
     checkCudaError(cudaDeviceSynchronize(), "statisticsCollectionKernel synchronization");
+
+    cudaMemcpy(&h_stats, d_stats, sizeof(Statistics), cudaMemcpyDeviceToHost);
+
+    printf("Susceptible: %d, Exposed: %d, Infectious: %d, Recovered: %d\n", h_stats.susceptible,
+           h_stats.exposed, h_stats.infectious, h_stats.recovered);
+
+    cudaFree(d_stats);
 
     printf("All kernels launched and completed successfully.\n");
 

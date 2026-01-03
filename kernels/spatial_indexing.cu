@@ -2,6 +2,7 @@
 #include "support.h"
 #include <stdio.h>
 
+// Assigns each agent to a grid cell for spatial partitioning for efficient proximity queries.
 __global__ void spatialIndexingKernel(AgentData d_agents, int num_agents, float cell_size,
                                       int grid_width) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;

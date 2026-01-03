@@ -25,8 +25,6 @@ typedef struct {
     int exposed;
     int infectious;
     int recovered;
-    int newInfections;
-    int newRecoveries;
 } Statistics;
 
 typedef struct {

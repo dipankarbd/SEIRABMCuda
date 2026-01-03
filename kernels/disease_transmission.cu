@@ -2,6 +2,9 @@
 #include "support.h"
 #include <stdio.h>
 
+// Simulates the transmission of the disease between agents in parallel.
+// This kernel is the core of the epidemic simulation. It models the spread of the
+// disease from infectious agents to susceptible agents.
 __global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents, int grid_width,
                                           int grid_height, float contact_radius,
                                           float incubation_mean, float incubation_std,

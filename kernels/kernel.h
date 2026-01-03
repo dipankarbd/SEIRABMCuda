@@ -24,7 +24,7 @@ __global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents, in
 );
 __global__ void stateTransitionKernel(AgentData d_agents, int num_agents, float timestep,
                                       float infectious_mean, float infectious_std);
-__global__ void statisticsCollectionKernel(AgentData d_agents, int num_agents);
+__global__ void statisticsCollectionKernel(AgentData d_agents, int num_agents, Statistics *d_stats);
 
 #ifdef __cplusplus
 }
