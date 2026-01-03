@@ -49,6 +49,38 @@ void freeAgentData(AgentData *d_agents) {
     printf("GPU memory freed.\n");
 }
 
+void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infected, int random_seed,
+                         float infectious_mean) {
+    if (initial_infected <= 0 || initial_infected > num_agents) {
+        return;
+    }
+
+    printf("Infecting %d agents on the host...\n", initial_infected);
+
+    uint8_t *h_agents_state = (uint8_t *)malloc(num_agents * sizeof(uint8_t));
+    float *h_agents_stateTimer = (float *)malloc(num_agents * sizeof(float));
+
+    cudaMemcpy(h_agents_state, d_agents.state, num_agents * sizeof(uint8_t),
+               cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_agents_stateTimer, d_agents.stateTimer, num_agents * sizeof(float),
+               cudaMemcpyDeviceToHost);
+
+    srand(random_seed);
+    for (int i = 0; i < initial_infected; i++) {
+        int idx = rand() % num_agents;
+        h_agents_state[idx] = INFECTIOUS;
+        h_agents_stateTimer[idx] = infectious_mean;
+    }
+
+    cudaMemcpy(d_agents.state, h_agents_state, num_agents * sizeof(uint8_t),
+               cudaMemcpyHostToDevice);
+    cudaMemcpy(d_agents.stateTimer, h_agents_stateTimer, num_agents * sizeof(float),
+               cudaMemcpyHostToDevice);
+
+    free(h_agents_state);
+    free(h_agents_stateTimer);
+}
+
 int main(int argc, char *argv[]) {
     printf("\nGPU-Accelerated Agent-Based SEIR Epidemic Simulation...\n");
 
@@ -89,7 +121,8 @@ int main(int argc, char *argv[]) {
     checkCudaError(cudaGetLastError(), "agentInitializationKernel launch");
     checkCudaError(cudaDeviceSynchronize(), "agentInitializationKernel synchronization");
 
-    // TODO - infect initial agents
+    infectInitialAgents(d_agents, num_agents, h_config.disease.initial_infected, random_seed,
+                        infectious_mean);
 
     printf("Launching agentMovementKernel...\n");
     agentMovementKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, world_width,
