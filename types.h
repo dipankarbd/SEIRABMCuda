@@ -14,7 +14,7 @@ typedef struct {
     float *homeY;           // home y positions
     float *vx;              // velocity x
     float *vy;              // velocity y
-    uint8_t *state;         // SEIR state
+    unsigned int *state;    // SEIR state
     float *stateTimer;      // time remaining in current state
     unsigned int *cellId;   // spatial hash
     curandState *rngStates; // RNG state per agent

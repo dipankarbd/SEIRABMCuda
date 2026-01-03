@@ -22,7 +22,7 @@ void allocateAgentData(AgentData *d_agents, int num_agents) {
     checkCudaError(cudaStat, "cudaMalloc d_agents.vx");
     cudaStat = cudaMalloc((void **)&d_agents->vy, num_agents * sizeof(float));
     checkCudaError(cudaStat, "cudaMalloc d_agents.vy");
-    cudaStat = cudaMalloc((void **)&d_agents->state, num_agents * sizeof(uint8_t));
+    cudaStat = cudaMalloc((void **)&d_agents->state, num_agents * sizeof(unsigned int));
     checkCudaError(cudaStat, "cudaMalloc d_agents.state");
     cudaStat = cudaMalloc((void **)&d_agents->stateTimer, num_agents * sizeof(float));
     checkCudaError(cudaStat, "cudaMalloc d_agents.stateTimer");
@@ -57,10 +57,10 @@ void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infecte
 
     printf("Infecting %d agents on the host...\n", initial_infected);
 
-    uint8_t *h_agents_state = (uint8_t *)malloc(num_agents * sizeof(uint8_t));
+    unsigned int *h_agents_state = (unsigned int *)malloc(num_agents * sizeof(unsigned int));
     float *h_agents_stateTimer = (float *)malloc(num_agents * sizeof(float));
 
-    cudaMemcpy(h_agents_state, d_agents.state, num_agents * sizeof(uint8_t),
+    cudaMemcpy(h_agents_state, d_agents.state, num_agents * sizeof(unsigned int),
                cudaMemcpyDeviceToHost);
     cudaMemcpy(h_agents_stateTimer, d_agents.stateTimer, num_agents * sizeof(float),
                cudaMemcpyDeviceToHost);
@@ -72,7 +72,7 @@ void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infecte
         h_agents_stateTimer[idx] = infectious_mean;
     }
 
-    cudaMemcpy(d_agents.state, h_agents_state, num_agents * sizeof(uint8_t),
+    cudaMemcpy(d_agents.state, h_agents_state, num_agents * sizeof(unsigned int),
                cudaMemcpyHostToDevice);
     cudaMemcpy(d_agents.stateTimer, h_agents_stateTimer, num_agents * sizeof(float),
                cudaMemcpyHostToDevice);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     allocateAgentData(&d_agents, num_agents);
 
     // Determine grid and block dimensions
-    int threadsPerBlock = 256;
+    int threadsPerBlock = BLOCK_SIZE;
     int numBlocks = (num_agents + threadsPerBlock - 1) / threadsPerBlock;
 
     printf("Launching agentInitializationKernel...\n");
