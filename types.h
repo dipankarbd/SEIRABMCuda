@@ -71,4 +71,3 @@ typedef struct {
 } SimulationConfig;
 
 #endif
-

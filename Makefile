@@ -1,12 +1,12 @@
 NVCC        = nvcc
-NVCC_FLAGS  = -O3 -Iinclude -Ithird_party -Ikernels -I.
-LD_FLAGS    = -lcudart -lm
+NVCC_FLAGS  = -O3 -Iinclude -Ithird_party -Ikernels -I. -rdc=true
+LD_FLAGS    = -lcudart -lm -lcudadevrt
 EXE	        = seirabmcuda
 
 OBJ_DIR     = obj_tmp
 
 # Source files
-SRCS_CU     = main.cu config_loader.cu
+SRCS_CU     = main.cu config_loader.cu support.cu
 SRCS_C      = third_party/cJSON.c
 SRCS_KERNELS= kernels/agent_initialization.cu kernels/agent_movement.cu \
               kernels/spatial_indexing.cu kernels/disease_transmission.cu \

@@ -11,10 +11,19 @@ extern "C" {
 __global__ void agentInitializationKernel(AgentData d_agents, int num_agents, unsigned long seed,
                                           float world_width, float world_height,
                                           float movement_speed);
-__global__ void agentMovementKernel(AgentData d_agents, int num_agents);
-__global__ void spatialIndexingKernel(AgentData d_agents, int num_agents);
-__global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents);
-__global__ void stateTransitionKernel(AgentData d_agents, int num_agents);
+__global__ void agentMovementKernel(AgentData d_agents, int num_agents, float world_width,
+                                    float world_height, float movement_speed,
+                                    float home_return_probability, float timestep);
+__global__ void spatialIndexingKernel(AgentData d_agents, int num_agents, float cell_size,
+                                      int grid_width);
+__global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents, int grid_width,
+                                          int grid_height, float contact_radius,
+                                          float incubation_mean, float incubation_std,
+                                          float transmission_prob
+
+);
+__global__ void stateTransitionKernel(AgentData d_agents, int num_agents, float timestep,
+                                      float infectious_mean, float infectious_std);
 __global__ void statisticsCollectionKernel(AgentData d_agents, int num_agents);
 
 #ifdef __cplusplus

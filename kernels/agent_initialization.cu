@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "types.h"
 #include <curand_kernel.h>
 #include <stdio.h>
 
