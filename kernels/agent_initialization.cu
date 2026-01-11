@@ -1,7 +1,11 @@
 #include "kernel.h"
+#include "types.h"
 #include <curand_kernel.h>
 #include <stdio.h>
 
+// Initializes the state of each agent in parallel.
+// This kernel is responsible for setting the initial properties of each agent at the beginning
+// of the simulation. Each thread initializes one agent.
 __global__ void agentInitializationKernel(AgentData d_agents, int num_agents, unsigned long seed,
                                           float world_width, float world_height,
                                           float movement_speed) {

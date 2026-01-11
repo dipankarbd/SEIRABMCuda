@@ -14,7 +14,7 @@ typedef struct {
     float *homeY;           // home y positions
     float *vx;              // velocity x
     float *vy;              // velocity y
-    uint8_t *state;         // SEIR state
+    unsigned int *state;    // SEIR state
     float *stateTimer;      // time remaining in current state
     unsigned int *cellId;   // spatial hash
     curandState *rngStates; // RNG state per agent
@@ -25,8 +25,6 @@ typedef struct {
     int exposed;
     int infectious;
     int recovered;
-    int newInfections;
-    int newRecoveries;
 } Statistics;
 
 typedef struct {
@@ -71,4 +69,3 @@ typedef struct {
 } SimulationConfig;
 
 #endif
-

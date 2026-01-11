@@ -2,15 +2,13 @@
 #define SUPPORT_H
 
 #include <cuda_runtime.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <curand_kernel.h>
 
-// Helper function to check CUDA errors
-void checkCudaError(cudaError_t cudaStat, const char *msg) {
-    if (cudaStat != cudaSuccess) {
-        fprintf(stderr, "%s failed: %s\n", msg, cudaGetErrorString(cudaStat));
-        exit(EXIT_FAILURE);
-    }
-}
+#define BLOCK_SIZE 512
+#define NUM_AGENTS_PER_BATCH 256
+
+void checkCudaError(cudaError_t cudaStat, const char *msg);
+
+__device__ float gaussianRandom(curandState *state, float mean, float std);
 
 #endif // SUPPORT_H
