@@ -10,7 +10,48 @@ __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float wo
                                     float home_return_probability, float timestep) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx == 0) {
-        printf("TODO: agentMovementKernel - Thread 0 executing for agent %d\n", idx);
+    if (idx < num_agents) {
+        curandState rngState = d_agents.rngStates[idx];
+
+        float x = d_agents.x[idx];
+        float y = d_agents.y[idx];
+        float vx = d_agents.vx[idx];
+        float vy = d_agents.vy[idx];
+
+        if (curand_uniform(&rngState) < home_return_probability) {
+            float dx = d_agents.homeX[idx] - x;
+            float dy = d_agents.homeY[idx] - y;
+            float dist = sqrtf(dx * dx + dy * dy);
+
+            if (dist > 0.1f) {
+                vx = (dx / dist) * movement_speed;
+                vy = (dy / dist) * movement_speed;
+            }
+        } else if (curand_uniform(&rngState) < 0.1f) {
+            float angle = curand_uniform(&rngState) * 2.0f * M_PI;
+            vx = cosf(angle) * movement_speed;
+            vy = sinf(angle) * movement_speed;
+        }
+
+        x += vx * timestep;
+        y += vy * timestep;
+
+        if (x < 0.0f) {
+            x += world_width;
+        } else if (x >= world_width) {
+            x -= world_width;
+        }
+
+        if (y < 0.0f) {
+            y += world_height;
+        } else if (y >= world_height) {
+            y -= world_height;
+        }
+
+        d_agents.x[idx] = x;
+        d_agents.y[idx] = y;
+        d_agents.vx[idx] = vx;
+        d_agents.vy[idx] = vy;
+        d_agents.rngStates[idx] = rngState;
     }
 }
