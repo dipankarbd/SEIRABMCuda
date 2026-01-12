@@ -10,7 +10,32 @@ __global__ void stateTransitionKernel(AgentData d_agents, int num_agents, float 
                                       float infectious_mean, float infectious_std) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx == 0) {
-        printf("TODO: stateTransitionKernel - Thread 0 executing for agent %d\n", idx);
+    if (idx < num_agents) {
+        unsigned int state = d_agents.state[idx];
+
+        if (state == SUSCEPTIBLE || state == RECOVERED) {
+            return;
+        }
+
+        float stateTimer = d_agents.stateTimer[idx];
+        stateTimer -= timestep;
+
+        if (stateTimer <= 0.0f) {
+            curandState rngState = d_agents.rngStates[idx];
+
+            if (state == EXPOSED) {
+                state = INFECTIOUS;
+                float infectiousTime = gaussianRandom(&rngState, infectious_mean, infectious_std);
+                stateTimer = fmaxf(1.0f, infectiousTime);
+            } else if (state == INFECTIOUS) {
+                state = RECOVERED;
+                stateTimer = 0.0f;
+            }
+
+            d_agents.rngStates[idx] = rngState;
+        }
+
+        d_agents.state[idx] = state;
+        d_agents.stateTimer[idx] = stateTimer;
     }
 }
