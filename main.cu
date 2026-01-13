@@ -81,6 +81,24 @@ void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infecte
     free(h_agents_stateTimer);
 }
 
+void write_statistics_to_csv(Statistics *h_stats, int totalSteps, float timestep) {
+    FILE *fp = fopen("simulation_stats.csv", "w");
+    if (fp == NULL) {
+        fprintf(stderr, "Error opening simulation_stats.csv for writing.\n");
+        return;
+    }
+
+    fprintf(fp, "Time,Susceptible,Exposed,Infectious,Recovered\n");
+
+    for (int i = 0; i < totalSteps; i++) {
+        fprintf(fp, "%.1f,%d,%d,%d,%d\n", i * timestep, h_stats[i].susceptible, h_stats[i].exposed,
+                h_stats[i].infectious, h_stats[i].recovered);
+    }
+
+    fclose(fp);
+    printf("Simulation statistics written to simulation_stats.csv\n");
+}
+
 int main(int argc, char *argv[]) {
     printf("\nGPU-Accelerated Agent-Based SEIR Epidemic Simulation...\n");
 
@@ -161,9 +179,13 @@ int main(int argc, char *argv[]) {
 
         cudaMemcpy(&h_stats[step], d_stat, sizeof(Statistics), cudaMemcpyDeviceToHost);
 
-        printf("Day %.1f: S=%d E=%d I=%d R=%d\n", currentDay, h_stats[step].susceptible,
-               h_stats[step].exposed, h_stats[step].infectious, h_stats[step].recovered);
+        if (step == 0 || (int)currentDay > (int)((step - 1) * timestep)) {
+            printf("Day %d: S=%d E=%d I=%d R=%d\n", (int)currentDay, h_stats[step].susceptible,
+                   h_stats[step].exposed, h_stats[step].infectious, h_stats[step].recovered);
+        }
     }
+
+    write_statistics_to_csv(h_stats, totalSteps, timestep);
 
     cudaFree(d_stat);
     freeAgentData(&d_agents);

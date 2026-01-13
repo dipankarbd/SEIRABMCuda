@@ -1,8 +1,8 @@
 {
   "simulation": {
-    "num_agents": 5000000,
-    "world_size": [10000.0, 10000.0],
-    "timestep": 0.1,
+    "num_agents": 500000,
+    "world_size": [1000.0, 1000.0],
+    "timestep": 0.3,
     "duration": 365,
     "randomSeed": 42
   },

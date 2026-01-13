@@ -2,7 +2,6 @@
 #include "support.h"
 #include <stdio.h>
 
-
 __device__ int getCellId(float x, float y, float cellSize, int gridWidth) {
     int cellX = (int)(x / cellSize);
     int cellY = (int)(y / cellSize);
