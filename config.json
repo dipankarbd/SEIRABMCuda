@@ -32,11 +32,5 @@
       "daily_capacity": 5000,
       "efficacy": 0.9
     }
-  ],
-  "output": {
-    "snapshotInterval": 4,
-    "outputDir": "./output",
-    "saveAnimationFrames": true,
-    "animationFrameInterval": 4
-  }
+  ]
 }

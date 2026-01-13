@@ -55,17 +55,23 @@ typedef struct {
 } AgentBehavior;
 
 typedef struct {
-    int snapshotInterval;
-    char *outputDir;
-    bool saveAnimationFrames;
-    int animationFrameInterval;
-} OutputParams;
+    int start_day;
+    int end_day;
+    float mobility_reduction;
+} InterventionLockdown;
+
+typedef struct {
+    int start_day;
+    int daily_capacity;
+    float efficacy;
+} InterventionVaccination;
 
 typedef struct {
     SimulationParams simulation;
     DiseaseParams disease;
     AgentBehavior agent_behavior;
-    OutputParams output;
+    InterventionLockdown *lockdown;
+    InterventionVaccination *vaccination;
 } SimulationConfig;
 
 #endif

@@ -85,42 +85,37 @@ void load_simulation_config(const char *filename, SimulationConfig *config) {
     config->agent_behavior.home_return_probability =
         (float)cJSON_GetObjectItem(agent_behavior_json, "home_return_probability")->valuedouble;
 
-    cJSON *output_json = cJSON_GetObjectItem(json, "output");
-    if (!cJSON_IsObject(output_json)) {
-        fprintf(stderr, "Error: 'output' object not found or invalid in config file.\n");
-        exit(1);
-    }
-    cJSON *snapshot_interval_json = cJSON_GetObjectItem(output_json, "snapshotInterval");
-    if (cJSON_IsNumber(snapshot_interval_json)) {
-        config->output.snapshotInterval = snapshot_interval_json->valueint;
-    } else {
-        fprintf(stderr,
-                "Error: 'snapshotInterval' not found or invalid in output configuration.\n");
-        exit(1);
-    }
-    cJSON *output_dir_json = cJSON_GetObjectItem(output_json, "outputDir");
-    if (cJSON_IsString(output_dir_json)) {
-        config->output.outputDir = strdup(output_dir_json->valuestring);
-    } else {
-        fprintf(stderr, "Error: 'outputDir' not found or invalid in output configuration.\n");
-        exit(1);
-    }
-    cJSON *save_animation_frames_json = cJSON_GetObjectItem(output_json, "saveAnimationFrames");
-    if (cJSON_IsBool(save_animation_frames_json)) {
-        config->output.saveAnimationFrames = cJSON_IsTrue(save_animation_frames_json);
-    } else {
-        fprintf(stderr,
-                "Error: 'saveAnimationFrames' not found or invalid in output configuration.\n");
-        exit(1);
-    }
-    cJSON *animation_frame_interval_json =
-        cJSON_GetObjectItem(output_json, "animationFrameInterval");
-    if (cJSON_IsNumber(animation_frame_interval_json)) {
-        config->output.animationFrameInterval = animation_frame_interval_json->valueint;
-    } else {
-        fprintf(stderr,
-                "Error: 'animationFrameInterval' not found or invalid in output configuration.\n");
-        exit(1);
+    // Initialize intervention pointers to NULL
+    config->lockdown = NULL;
+    config->vaccination = NULL;
+
+    cJSON *interventions_json = cJSON_GetObjectItem(json, "interventions");
+    if (cJSON_IsArray(interventions_json)) {
+        int num_interventions = cJSON_GetArraySize(interventions_json);
+        for (int i = 0; i < num_interventions; i++) {
+            cJSON *intervention_json = cJSON_GetArrayItem(interventions_json, i);
+            cJSON *type_json = cJSON_GetObjectItem(intervention_json, "type");
+            if (cJSON_IsString(type_json)) {
+                if (strcmp(type_json->valuestring, "lockdown") == 0) {
+                    config->lockdown = (InterventionLockdown *)malloc(sizeof(InterventionLockdown));
+                    config->lockdown->start_day =
+                        cJSON_GetObjectItem(intervention_json, "start_day")->valueint;
+                    config->lockdown->end_day =
+                        cJSON_GetObjectItem(intervention_json, "end_day")->valueint;
+                    config->lockdown->mobility_reduction = (float)cJSON_GetObjectItem(
+                        intervention_json, "mobility_reduction")->valuedouble;
+                } else if (strcmp(type_json->valuestring, "vaccination") == 0) {
+                    config->vaccination =
+                        (InterventionVaccination *)malloc(sizeof(InterventionVaccination));
+                    config->vaccination->start_day =
+                        cJSON_GetObjectItem(intervention_json, "start_day")->valueint;
+                    config->vaccination->daily_capacity =
+                        cJSON_GetObjectItem(intervention_json, "daily_capacity")->valueint;
+                    config->vaccination->efficacy =
+                        (float)cJSON_GetObjectItem(intervention_json, "efficacy")->valuedouble;
+                }
+            }
+        }
     }
 
     printf("Config loaded successfully.\n");
@@ -133,11 +128,19 @@ void load_simulation_config(const char *filename, SimulationConfig *config) {
     printf("  Mobility Radius: %f\n", config->agent_behavior.mobility_radius);
     printf("  Home Return Probability: %f\n", config->agent_behavior.home_return_probability);
 
-    printf("Output Parameters:\n");
-    printf("  Snapshot Interval: %d\n", config->output.snapshotInterval);
-    printf("  Output Directory: %s\n", config->output.outputDir);
-    printf("  Save Animation Frames: %s\n", config->output.saveAnimationFrames ? "true" : "false");
-    printf("  Animation Frame Interval: %d\n", config->output.animationFrameInterval);
+    if (config->lockdown) {
+        printf("Lockdown Intervention:\n");
+        printf("  Start Day: %d\n", config->lockdown->start_day);
+        printf("  End Day: %d\n", config->lockdown->end_day);
+        printf("  Mobility Reduction: %f\n", config->lockdown->mobility_reduction);
+    }
+
+    if (config->vaccination) {
+        printf("Vaccination Intervention:\n");
+        printf("  Start Day: %d\n", config->vaccination->start_day);
+        printf("  Daily Capacity: %d\n", config->vaccination->daily_capacity);
+        printf("  Efficacy: %f\n", config->vaccination->efficacy);
+    }
 
     cJSON_Delete(json);
     free(buffer);
@@ -148,8 +151,13 @@ void free_simulation_config(SimulationConfig *config) {
         return;
     }
 
-    if (config->output.outputDir != NULL) {
-        free(config->output.outputDir);
-        config->output.outputDir = NULL;
+    if (config->lockdown != NULL) {
+        free(config->lockdown);
+        config->lockdown = NULL;
+    }
+
+    if (config->vaccination != NULL) {
+        free(config->vaccination);
+        config->vaccination = NULL;
     }
 }
