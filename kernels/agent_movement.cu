@@ -7,7 +7,8 @@
 // Each thread updates one agent's position and velocity.
 __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float world_width,
                                     float world_height, float movement_speed,
-                                    float home_return_probability, float timestep) {
+                                    float mobility_reduction, float home_return_probability,
+                                    float timestep) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < num_agents) {

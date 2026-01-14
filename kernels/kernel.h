@@ -13,7 +13,8 @@ __global__ void agentInitializationKernel(AgentData d_agents, int num_agents, un
                                           float movement_speed);
 __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float world_width,
                                     float world_height, float movement_speed,
-                                    float home_return_probability, float timestep);
+                                    float mobility_reduction, float home_return_probability,
+                                    float timestep);
 __global__ void spatialIndexingKernel(AgentData d_agents, int num_agents, float cell_size,
                                       int grid_width);
 __global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents, int grid_width,

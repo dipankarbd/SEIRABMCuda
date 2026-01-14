@@ -153,9 +153,18 @@ int main(int argc, char *argv[]) {
     for (int step = 0; step < totalSteps; step++) {
         float currentDay = step * timestep;
 
-        agentMovementKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, world_width,
-                                                            world_height, agent_movement_speed,
-                                                            home_return_probability, timestep);
+        float mobilityReduction = 0.0f;
+
+        if (h_config.lockdown) {
+            if (currentDay >= h_config.lockdown->start_day &&
+                currentDay <= h_config.lockdown->end_day) {
+                mobilityReduction = h_config.lockdown->mobility_reduction;
+            }
+        }
+
+        agentMovementKernel<<<numBlocks, threadsPerBlock>>>(
+            d_agents, num_agents, world_width, world_height, agent_movement_speed,
+            mobilityReduction, home_return_probability, timestep);
         checkCudaError(cudaGetLastError(), "agentMovementKernel launch");
 
         spatialIndexingKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, cell_size,
