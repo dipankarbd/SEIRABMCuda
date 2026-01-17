@@ -81,6 +81,32 @@ void infectInitialAgents(AgentData d_agents, int num_agents, int initial_infecte
     free(h_agents_stateTimer);
 }
 
+void applyVaccination(AgentData d_agents, int num_agents, int daily_capacity, float efficacy,
+                      int random_seed) {
+    if (daily_capacity <= 0) {
+        return;
+    }
+    printf("Applying vaccination to agents...\n");
+
+    unsigned int *h_agents_state = (unsigned int *)malloc(num_agents * sizeof(unsigned int));
+    cudaMemcpy(h_agents_state, d_agents.state, num_agents * sizeof(unsigned int),
+               cudaMemcpyDeviceToHost);
+
+    srand(random_seed);
+    for (int i = 0; i < daily_capacity; i++) {
+        int idx = rand() % num_agents;
+        if (h_agents_state[idx] == SUSCEPTIBLE) {
+            if ((float)rand() / RAND_MAX < efficacy) {
+                h_agents_state[idx] = RECOVERED;
+            }
+        }
+    }
+
+    cudaMemcpy(d_agents.state, h_agents_state, num_agents * sizeof(unsigned int),
+               cudaMemcpyHostToDevice);
+    free(h_agents_state);
+}
+
 void write_statistics_to_csv(Statistics *h_stats, int totalSteps, float timestep) {
     FILE *fp = fopen("simulation_stats.csv", "w");
     if (fp == NULL) {
@@ -159,6 +185,13 @@ int main(int argc, char *argv[]) {
             if (currentDay >= h_config.lockdown->start_day &&
                 currentDay <= h_config.lockdown->end_day) {
                 mobilityReduction = h_config.lockdown->mobility_reduction;
+            }
+        }
+
+        if (h_config.vaccination) {
+            if (currentDay >= h_config.vaccination->start_day) {
+                applyVaccination(d_agents, num_agents, h_config.vaccination->daily_capacity,
+                                 h_config.vaccination->efficacy, random_seed + step);
             }
         }
 
