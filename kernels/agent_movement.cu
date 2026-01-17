@@ -12,6 +12,8 @@ __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float wo
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < num_agents) {
+        float effectiveSpeed = movement_speed * (1.0f - mobility_reduction);
+
         curandState rngState = d_agents.rngStates[idx];
 
         float x = d_agents.x[idx];
@@ -25,13 +27,13 @@ __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float wo
             float dist = sqrtf(dx * dx + dy * dy);
 
             if (dist > 0.1f) {
-                vx = (dx / dist) * movement_speed;
-                vy = (dy / dist) * movement_speed;
+                vx = (dx / dist) * effectiveSpeed;
+                vy = (dy / dist) * effectiveSpeed;
             }
         } else if (curand_uniform(&rngState) < 0.1f) {
             float angle = curand_uniform(&rngState) * 2.0f * M_PI;
-            vx = cosf(angle) * movement_speed;
-            vy = sinf(angle) * movement_speed;
+            vx = cosf(angle) * effectiveSpeed;
+            vy = sinf(angle) * effectiveSpeed;
         }
 
         x += vx * timestep;
