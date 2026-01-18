@@ -17,12 +17,12 @@ __global__ void agentMovementKernel(AgentData d_agents, int num_agents, float wo
                                     float timestep);
 __global__ void spatialIndexingKernel(AgentData d_agents, int num_agents, float cell_size,
                                       int grid_width);
-__global__ void diseaseTransmissionKernel(AgentData d_agents, int num_agents, int grid_width,
+__global__ void diseaseTransmissionKernel(AgentData d_agents,
+                                          unsigned int *d_infectious_agent_indices,
+                                          int num_infected_agents, int num_agents, int grid_width,
                                           int grid_height, float contact_radius,
                                           float incubation_mean, float incubation_std,
-                                          float transmission_prob
-
-);
+                                          float transmission_prob);
 __global__ void stateTransitionKernel(AgentData d_agents, int num_agents, float timestep,
                                       float infectious_mean, float infectious_std);
 __global__ void statisticsCollectionKernel(AgentData d_agents, int num_agents, Statistics *d_stats);

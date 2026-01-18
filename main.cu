@@ -107,6 +107,50 @@ void applyVaccination(AgentData d_agents, int num_agents, int daily_capacity, fl
     free(h_agents_state);
 }
 
+void launchDiseaseTransMissionKernel(AgentData d_agents, int num_agents, int grid_width,
+                                     int grid_height, float contact_radius, float incubation_mean,
+                                     float incubation_std, float transmission_prob) {
+
+    unsigned int *h_agents_state = (unsigned int *)malloc(num_agents * sizeof(unsigned int));
+    cudaMemcpy(h_agents_state, d_agents.state, num_agents * sizeof(unsigned int),
+               cudaMemcpyDeviceToHost);
+
+    unsigned int *h_infectious_agent_indices =
+        (unsigned int *)malloc(num_agents * sizeof(unsigned int));
+
+    int num_infected_agents = 0;
+    for (int i = 0; i < num_agents; i++) {
+        if (h_agents_state[i] == INFECTIOUS) {
+            h_infectious_agent_indices[num_infected_agents] = i;
+            num_infected_agents += 1;
+        }
+    }
+
+    unsigned int *d_infectious_agent_indices;
+    cudaError_t cudaStat = cudaMalloc((void **)&d_infectious_agent_indices,
+                                      num_infected_agents * sizeof(unsigned int));
+    checkCudaError(cudaStat, "cudaMalloc d_infectious_agent_indices");
+
+    cudaStat = cudaMemcpy(d_infectious_agent_indices, h_infectious_agent_indices,
+                          num_infected_agents * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    checkCudaError(cudaStat, "cudaMemcpy h_infectious_agent_indices to device");
+
+    if (num_infected_agents > 0) {
+        int threadsPerBlock = BLOCK_SIZE;
+        int numBlocks = (num_infected_agents + threadsPerBlock - 1) / threadsPerBlock;
+
+        diseaseTransmissionKernel<<<numBlocks, threadsPerBlock>>>(
+            d_agents, d_infectious_agent_indices, num_infected_agents, num_agents, grid_width,
+            grid_height, contact_radius, incubation_mean, incubation_std, transmission_prob);
+        checkCudaError(cudaGetLastError(), "diseaseTransmissionKernel launch");
+        checkCudaError(cudaDeviceSynchronize(), "diseaseTransmissionKernel synchronization");
+    }
+
+    cudaFree(d_infectious_agent_indices);
+    free(h_infectious_agent_indices);
+    free(h_agents_state);
+}
+
 void write_statistics_to_csv(Statistics *h_stats, int totalSteps, float timestep) {
     FILE *fp = fopen("simulation_stats.csv", "w");
     if (fp == NULL) {
@@ -204,10 +248,9 @@ int main(int argc, char *argv[]) {
                                                               grid_width);
         checkCudaError(cudaGetLastError(), "spatialIndexingKernel launch");
 
-        diseaseTransmissionKernel<<<numBlocks, threadsPerBlock>>>(
-            d_agents, num_agents, grid_width, grid_height, contact_radius, incubation_mean,
-            incubation_std, transmission_prob);
-        checkCudaError(cudaGetLastError(), "diseaseTransmissionKernel launch");
+        launchDiseaseTransMissionKernel(d_agents, num_agents, grid_width, grid_height,
+                                        contact_radius, incubation_mean, incubation_std,
+                                        transmission_prob);
 
         stateTransitionKernel<<<numBlocks, threadsPerBlock>>>(d_agents, num_agents, timestep,
                                                               infectious_mean, infectious_std);
